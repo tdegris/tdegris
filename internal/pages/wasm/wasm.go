@@ -5,31 +5,26 @@ package main
 import (
 	"fmt"
 
+	"github.com/tdegris/tdegris/internal/pages/wasm/lessons"
+	"github.com/tdegris/tdegris/internal/pages/wasm/ui"
+	"github.com/tdegris/tdegris/internal/pages/wasm/ui/code"
+	"github.com/tdegris/tdegris/internal/pages/wasm/ui/text"
 	"honnef.co/go/js/dom/v2"
 )
 
-func findByClass[T dom.Element](start interface{ GetElementsByClassName(string) []dom.Element }, class string) (zero T, err error) {
-	els := start.GetElementsByClassName(class)
-	if len(els) == 0 {
-		return zero, fmt.Errorf("not element of class %s found", class)
-	}
-	if len(els) > 1 {
-		return zero, fmt.Errorf("too many elements of class %s found", class)
-	}
-	el := els[0]
-	elT, ok := el.(T)
-	if !ok {
-		return zero, fmt.Errorf("node %s:%T cannot be converted %T", el, el, zero)
-	}
-	return elT, nil
-}
-
 func main() {
-	doc := dom.GetWindow().Document()
-	body, err := findByClass[dom.HTMLElement](doc, "root")
+	gui := ui.New(dom.GetWindow())
+	body, err := ui.FindElementByClass[dom.HTMLElement](gui, "root_container")
 	if err != nil {
 		fmt.Println("ERROR:", err.Error())
 		return
 	}
-	body.SetInnerHTML("Hello from WASM writing HTML")
+
+	textElement := text.New(gui, body)
+	codeElement := code.New(gui, body)
+
+	chapters := lessons.New()
+	current := chapters[0].Content[0]
+	textElement.SetContent(current)
+	codeElement.SetContent(current)
 }
