@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -69,11 +68,7 @@ func findParent(folder string) (string, error) {
 }
 
 func mainHandler(fs http.FileSystem, w http.ResponseWriter, r *http.Request) {
-	if strings.HasSuffix(r.URL.Path, ".wasm") {
-		r.URL.Path += ".gz"
-		w.Header().Add("Content-Encoding", "gzip")
-	}
-	if r.URL.Path == "/res/main.wasm.gz" {
+	if r.URL.Path == "/res/main.wasm" {
 		if err := runGoGenerate(); err != nil {
 			http.Error(w, fmt.Sprintf("cannot generate WASM file: %v", err), http.StatusInternalServerError)
 			return

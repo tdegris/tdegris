@@ -31,5 +31,5 @@ func main() {
 		fmt.Println("ERROR:", err.Error())
 		return
 	}
-	body.SetInnerHTML("Hello from WASM")
+	body.SetInnerHTML("Hello from WASM writing HTML")
 }
