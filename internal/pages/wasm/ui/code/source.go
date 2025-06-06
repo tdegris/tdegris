@@ -2,7 +2,6 @@ package code
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/tdegris/tdegris/internal/pages/wasm/ui"
@@ -55,14 +54,13 @@ func (s *Source) set(src string) {
 	for _, child := range parent.ChildNodes() {
 		parent.RemoveChild(child)
 	}
-	for i, line := range strings.Split(src, "\n") {
+	for _, line := range strings.Split(src, "\n") {
 		if line == "" {
 			line = "<br>"
 		} else {
 			line = format(line)
 		}
 		s.code.gui.CreateDIV(parent,
-			ui.Property("data-line", strconv.Itoa(i)),
 			ui.InnerHTML(line),
 		)
 	}

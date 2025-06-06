@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"strconv"
+	"strings"
 	"syscall/js"
 
 	"honnef.co/go/js/dom/v2"
@@ -77,17 +77,22 @@ func selection() js.Value {
 	return js.Global().Call("getSelection")
 }
 
-func lineFromElement(el js.Value) (int, bool) {
-	line := el.Get("dataset").Get("line")
-	if line.IsUndefined() {
-		return -1, false
+func findParentDIV(el js.Value) js.Value {
+	current := el
+	for strings.ToUpper(current.Get("nodeName").String()) != "DIV" {
+		current = current.Get("parentElement")
 	}
-	lineI, err := strconv.Atoi(line.String())
-	if err != nil {
-		fmt.Printf("ERROR: Invalid line number: %q\n", line)
-		return -1, false
+	return current
+}
+
+func lineNumFromElement(el js.Value) int {
+	line := 0
+	prev := findParentDIV(el).Get("previousElementSibling")
+	for !prev.IsNull() {
+		prev = prev.Get("previousElementSibling")
+		line++
 	}
-	return lineI, true
+	return line
 }
 
 func (ui *UI) CurrentSelection(el dom.HTMLElement) *Selection {
@@ -95,9 +100,9 @@ func (ui *UI) CurrentSelection(el dom.HTMLElement) *Selection {
 		return nil
 	}
 	rang := selection().Call("getRangeAt", 0)
-	line, lineOk := lineFromElement(rang.Get("commonAncestorContainer").Get("parentElement"))
-	if !lineOk {
-		line = len(el.ChildNodes()) - 1
+	line := 0
+	if len(el.InnerHTML()) > 1 { // Necessary condition to handle the edge case when there is only a single character.
+		line = lineNumFromElement(rang.Get("commonAncestorContainer"))
 	}
 	return &Selection{
 		ui:     ui,
@@ -117,10 +122,6 @@ func (sel *Selection) SetAsCurrent() {
 		return
 	}
 	lineDiv := children[sel.line]
-	lineNum, lineOk := lineFromElement(lineDiv.Underlying())
-	if !lineOk || lineNum != sel.line {
-		return
-	}
 	textLine := lineDiv.FirstChild()
 	selection().Call("collapse", textLine.Underlying(), sel.column)
 }
