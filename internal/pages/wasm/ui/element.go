@@ -19,3 +19,26 @@ func Class(class string) ElementOption {
 		el.SetAttribute("class", class)
 	})
 }
+
+func Property(property, value string) ElementOption {
+	return ElementOptionF(func(el dom.Element) {
+		el.SetAttribute(property, value)
+	})
+}
+
+func Listener(typ string, listener func(dom.Event)) ElementOption {
+	return ElementOptionF(func(el dom.Element) {
+		el.AddEventListener(typ, true, listener)
+	})
+}
+
+func TextContent(s string) ElementOption {
+	return ElementOptionF(func(el dom.Element) {
+		el.SetTextContent(s)
+	})
+}
+func InnerHTML(s string) ElementOption {
+	return ElementOptionF(func(el dom.Element) {
+		el.SetInnerHTML(s)
+	})
+}

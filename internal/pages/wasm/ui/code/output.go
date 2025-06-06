@@ -18,5 +18,5 @@ func newOutput(code *Code, parent dom.Element) *Output {
 }
 
 func (s *Output) set(src string) {
-	s.div.SetInnerHTML("<pre>OUTPUT</pre>")
+	s.div.SetInnerHTML(src)
 }

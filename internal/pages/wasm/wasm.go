@@ -27,4 +27,6 @@ func main() {
 	current := chapters[0].Content[0]
 	textElement.SetContent(current)
 	codeElement.SetContent(current)
+
+	<-make(chan bool)
 }
