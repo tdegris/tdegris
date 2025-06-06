@@ -53,7 +53,7 @@ body {
 .code_source_textinput_container {
 	font-family: monospace, monospace;
 	background: rgb(200, 227, 255);
-	height: 20em;
+	height: 80%;
 }
 
 .code_source_controls_container {
