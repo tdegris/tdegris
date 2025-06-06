@@ -32,7 +32,7 @@ func newSource(code *Code, parent dom.Element) *Source {
 	s.control = code.gui.CreateDIV(parent,
 		ui.Class("code_source_controls_container"),
 	)
-	code.gui.CreateButton(s.control, "Button", s.onRun)
+	code.gui.CreateButton(s.control, "Run", s.onRun)
 	return s
 }
 
@@ -71,9 +71,9 @@ func (s *Source) onSourceChange(dom.Event) {
 	if currentSrc == s.lastSrc {
 		return
 	}
+	fmt.Println("InnerHTML", s.input.InnerHTML())
 	sel := s.code.gui.CurrentSelection(s.input)
 	defer sel.SetAsCurrent()
-	fmt.Println("InnerHTML", s.input.InnerHTML())
 	fmt.Println("Selection", sel)
 	s.set(currentSrc)
 }

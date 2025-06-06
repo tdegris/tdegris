@@ -77,9 +77,20 @@ func selection() js.Value {
 	return js.Global().Call("getSelection")
 }
 
+func nodeName(el js.Value) string {
+	if el.IsNull() {
+		return ""
+	}
+	return strings.ToUpper(el.Get("nodeName").String())
+}
+
+func isDiv(el js.Value) bool {
+	return nodeName(el) == "DIV"
+}
+
 func findParentDIV(el js.Value) js.Value {
 	current := el
-	for strings.ToUpper(current.Get("nodeName").String()) != "DIV" {
+	for !isDiv(current) {
 		current = current.Get("parentElement")
 	}
 	return current
@@ -95,22 +106,59 @@ func lineNumFromElement(el js.Value) int {
 	return line
 }
 
+func textLenFromPreviousElement(el js.Value) int {
+	if nodeName(el.Get("firstChild")) == "BR" {
+		return 0
+	}
+	// Make sure that the parent is DIV
+	// (moving up from text to font in a font tag)
+	js.Global().Set("FIRST", el)
+	for !isDiv(el.Get("parentNode")) {
+		el = el.Get("parentNode")
+	}
+	if el.Get("parentNode").Get("childNodes").Length() <= 1 {
+		return 0
+	}
+	// Start counting text context in the previous element
+	// (ignoring the current element)
+	strLen := 0
+	js.Global().Set("LAST", el)
+	prev := el.Get("previousSibling")
+	for !prev.IsNull() {
+		fmt.Println("  TEXT", prev.Get("nodeName").String(), prev.Get("textContent").String())
+		strLen += len(prev.Get("textContent").String())
+		js.Global().Set("LAST", prev)
+		prev = prev.Get("previousSibling")
+	}
+	return strLen
+}
+
 func (ui *UI) CurrentSelection(el dom.HTMLElement) *Selection {
 	if numRange := selection().Get("rangeCount").Int(); numRange == 0 {
 		return nil
 	}
 	rang := selection().Call("getRangeAt", 0)
+	ancestor := rang.Get("commonAncestorContainer")
 	line := 0
 	if len(el.InnerHTML()) > 1 { // Necessary condition to handle the edge case when there is only a single character.
-		line = lineNumFromElement(rang.Get("commonAncestorContainer"))
+		line = lineNumFromElement(ancestor)
 	}
+	fmt.Println("SELECT TEXT", ancestor.Get("textContent").String(), "START", rang.Get("startOffset").Int())
 	return &Selection{
 		ui:     ui,
 		el:     el,
 		rang:   rang,
-		column: rang.Get("startOffset").Int(),
+		column: textLenFromPreviousElement(ancestor) + rang.Get("startOffset").Int(),
 		line:   line,
 	}
+}
+
+func findLeafNode(el dom.Node) dom.Node {
+	current := el
+	for len(current.ChildNodes()) > 0 {
+		current = current.FirstChild()
+	}
+	return current
 }
 
 func (sel *Selection) SetAsCurrent() {
@@ -122,8 +170,15 @@ func (sel *Selection) SetAsCurrent() {
 		return
 	}
 	lineDiv := children[sel.line]
-	textLine := lineDiv.FirstChild()
-	selection().Call("collapse", textLine.Underlying(), sel.column)
+	column := sel.column
+	for _, child := range lineDiv.ChildNodes() {
+		textLen := len(child.TextContent())
+		if column <= textLen {
+			selection().Call("collapse", findLeafNode(child).Underlying(), column)
+			return
+		}
+		column -= textLen
+	}
 }
 
 func (sel *Selection) String() string {
