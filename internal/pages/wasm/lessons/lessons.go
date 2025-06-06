@@ -14,7 +14,7 @@ var data = []struct {
 		Content: []lesson{
 			{
 				Text: "Lesson 1.1</br>Some other</br>text.",
-				Code: "Some code for 1.1",
+				Code: "Some code for 1.1\nfloat32\npackage",
 			},
 			{
 				Text: "Lesson 1.2",

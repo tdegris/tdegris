@@ -41,12 +41,36 @@ func (s *Source) extractSource() string {
 	for _, child := range s.input.ChildNodes() {
 		src = append(src, ui.TextContent(child.Underlying()))
 	}
-	fmt.Printf("Source: %q\n", strings.Join(src, "\n"))
 	return strings.Join(src, "\n")
 }
 
+var keywordToColor = []struct {
+	color string
+	words []string
+}{
+	{
+		color: "var(--language-keyword)",
+		words: []string{
+			"var", "const", "return", "struct", "func", "package",
+		},
+	},
+	{
+		color: "var(--type-keyword)",
+		words: []string{
+			"bool", "string",
+			"int32", "int64",
+			"bfloat64", "float32", "float64",
+		},
+	},
+}
+
 func format(s string) string {
-	s = strings.ReplaceAll(s, "le", `<font color="#9900FF">le</font>`)
+	for _, color := range keywordToColor {
+		fontTag := fmt.Sprintf(`<span style="color:%s;">%%s</span>`, color.color)
+		for _, word := range color.words {
+			s = strings.ReplaceAll(s, word, fmt.Sprintf(fontTag, word))
+		}
+	}
 	return s
 }
 
@@ -74,9 +98,7 @@ func (s *Source) onSourceChange(dom.Event) {
 	}
 	sel := s.code.gui.CurrentSelection(s.input)
 	defer sel.SetAsCurrent()
-	fmt.Println("Selection", sel)
 	s.set(currentSrc)
-	fmt.Println("InnerHTML AFTER", s.input.InnerHTML())
 }
 
 func (s *Source) onRun(ev dom.Event) {

@@ -114,7 +114,6 @@ func textLenFromPreviousElement(el js.Value) int {
 	}
 	// Make sure that the parent is DIV
 	// (moving up from text to font in a font tag)
-	js.Global().Set("FIRST", el)
 	for !isDiv(el.Get("parentNode")) {
 		el = el.Get("parentNode")
 	}
@@ -124,12 +123,9 @@ func textLenFromPreviousElement(el js.Value) int {
 	// Start counting text context in the previous element
 	// (ignoring the current element)
 	strLen := 0
-	js.Global().Set("LAST", el)
 	prev := el.Get("previousSibling")
 	for !prev.IsNull() {
-		fmt.Printf("  TEXT %s->%q\n", prev.Get("nodeName").String(), TextContent(prev))
 		strLen += utf8.RuneCountInString(TextContent(prev))
-		js.Global().Set("LAST", prev)
 		prev = prev.Get("previousSibling")
 	}
 	return strLen
@@ -201,12 +197,10 @@ func (sel *Selection) SetAsCurrent() {
 	column := sel.column
 	for _, child := range lineDiv.ChildNodes() {
 		textLen := utf8.RuneCountInString(TextContent(child.Underlying()))
-		fmt.Printf("SET %s: [%d]%q", nodeName(child.Underlying()), textLen, TextContent(child.Underlying()))
 		if column <= textLen {
 			selection().Call("collapse", findFirstLeaf(child).Underlying(), column)
 			return
 		}
-		fmt.Println("  ", column, column-textLen)
 		column -= textLen
 	}
 }
