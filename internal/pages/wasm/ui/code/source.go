@@ -39,8 +39,9 @@ func newSource(code *Code, parent dom.Element) *Source {
 func (s *Source) extractSource() string {
 	var src []string
 	for _, child := range s.input.ChildNodes() {
-		src = append(src, child.TextContent())
+		src = append(src, ui.TextContent(child.Underlying()))
 	}
+	fmt.Printf("Source: %q\n", strings.Join(src, "\n"))
 	return strings.Join(src, "\n")
 }
 
@@ -71,11 +72,11 @@ func (s *Source) onSourceChange(dom.Event) {
 	if currentSrc == s.lastSrc {
 		return
 	}
-	fmt.Println("InnerHTML", s.input.InnerHTML())
 	sel := s.code.gui.CurrentSelection(s.input)
 	defer sel.SetAsCurrent()
 	fmt.Println("Selection", sel)
 	s.set(currentSrc)
+	fmt.Println("InnerHTML AFTER", s.input.InnerHTML())
 }
 
 func (s *Source) onRun(ev dom.Event) {

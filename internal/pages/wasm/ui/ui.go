@@ -2,8 +2,10 @@ package ui
 
 import (
 	"fmt"
+	"html"
 	"strings"
 	"syscall/js"
+	"unicode/utf8"
 
 	"honnef.co/go/js/dom/v2"
 )
@@ -125,8 +127,8 @@ func textLenFromPreviousElement(el js.Value) int {
 	js.Global().Set("LAST", el)
 	prev := el.Get("previousSibling")
 	for !prev.IsNull() {
-		fmt.Println("  TEXT", prev.Get("nodeName").String(), prev.Get("textContent").String())
-		strLen += len(prev.Get("textContent").String())
+		fmt.Printf("  TEXT %s->%q\n", prev.Get("nodeName").String(), TextContent(prev))
+		strLen += utf8.RuneCountInString(TextContent(prev))
 		js.Global().Set("LAST", prev)
 		prev = prev.Get("previousSibling")
 	}
@@ -143,7 +145,6 @@ func (ui *UI) CurrentSelection(el dom.HTMLElement) *Selection {
 	if len(el.InnerHTML()) > 1 { // Necessary condition to handle the edge case when there is only a single character.
 		line = lineNumFromElement(ancestor)
 	}
-	fmt.Println("SELECT TEXT", ancestor.Get("textContent").String(), "START", rang.Get("startOffset").Int())
 	return &Selection{
 		ui:     ui,
 		el:     el,
@@ -153,12 +154,39 @@ func (ui *UI) CurrentSelection(el dom.HTMLElement) *Selection {
 	}
 }
 
-func findLeafNode(el dom.Node) dom.Node {
-	current := el
-	for len(current.ChildNodes()) > 0 {
-		current = current.FirstChild()
+func TextContent(el js.Value) string {
+	var content strings.Builder
+	for leaf := range iterLeaves(&dom.BasicNode{Value: el}) {
+		data := leaf.Underlying().Get("data")
+		if data.IsNull() || data.IsUndefined() {
+			continue
+		}
+		content.WriteString(data.String())
 	}
-	return current
+	return html.UnescapeString(content.String())
+}
+
+func iterLeaves(el dom.Node) func(yield func(dom.Node) bool) {
+	return func(yield func(dom.Node) bool) {
+		if !el.HasChildNodes() {
+			yield(el)
+			return
+		}
+		for _, child := range el.ChildNodes() {
+			for leaf := range iterLeaves(child) {
+				if !yield(leaf) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func findFirstLeaf(el dom.Node) dom.Node {
+	for leaf := range iterLeaves(el) {
+		return leaf
+	}
+	return nil
 }
 
 func (sel *Selection) SetAsCurrent() {
@@ -172,11 +200,13 @@ func (sel *Selection) SetAsCurrent() {
 	lineDiv := children[sel.line]
 	column := sel.column
 	for _, child := range lineDiv.ChildNodes() {
-		textLen := len(child.TextContent())
+		textLen := utf8.RuneCountInString(TextContent(child.Underlying()))
+		fmt.Printf("SET %s: [%d]%q", nodeName(child.Underlying()), textLen, TextContent(child.Underlying()))
 		if column <= textLen {
-			selection().Call("collapse", findLeafNode(child).Underlying(), column)
+			selection().Call("collapse", findFirstLeaf(child).Underlying(), column)
 			return
 		}
+		fmt.Println("  ", column, column-textLen)
 		column -= textLen
 	}
 }

@@ -32,11 +32,6 @@ func Listener(typ string, listener func(dom.Event)) ElementOption {
 	})
 }
 
-func TextContent(s string) ElementOption {
-	return ElementOptionF(func(el dom.Element) {
-		el.SetTextContent(s)
-	})
-}
 func InnerHTML(s string) ElementOption {
 	return ElementOptionF(func(el dom.Element) {
 		el.SetInnerHTML(s)
