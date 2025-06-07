@@ -2,11 +2,9 @@ package code
 
 import (
 	"fmt"
+	"html"
 	"strings"
 
-	"github.com/gx-org/gx/build/builder"
-	"github.com/gx-org/gx/build/importers"
-	"github.com/gx-org/gx/stdlib"
 	"github.com/tdegris/tdegris/internal/pages/wasm/ui"
 	"honnef.co/go/js/dom/v2"
 )
@@ -40,11 +38,13 @@ func newSource(code *Code, parent dom.Element) *Source {
 }
 
 func (s *Source) extractSource() string {
-	var src []string
+	var srcs []string
 	for _, child := range s.input.ChildNodes() {
-		src = append(src, ui.TextContent(child.Underlying()))
+		srcs = append(srcs, ui.TextContent(child.Underlying()))
 	}
-	return strings.Join(src, "\n")
+	src := strings.Join(srcs, "\n")
+	src = strings.ReplaceAll(src, "\u00a0", " ")
+	return src
 }
 
 var keywordToColor = []struct {
@@ -54,7 +54,7 @@ var keywordToColor = []struct {
 	{
 		color: "var(--language-keyword)",
 		words: []string{
-			"var", "const", "return", "struct", "func", "package",
+			"var", "const", "return", "struct", "func", "package", "import",
 		},
 	},
 	{
@@ -68,6 +68,8 @@ var keywordToColor = []struct {
 }
 
 func format(s string) string {
+	s = strings.ReplaceAll(s, " ", "\u00a0")
+	s = html.EscapeString(s)
 	for _, color := range keywordToColor {
 		fontTag := fmt.Sprintf(`<span style="color:%s;">%%s</span>`, color.color)
 		for _, word := range color.words {
@@ -95,6 +97,10 @@ func (s *Source) set(src string) {
 	}
 }
 
+func (s *Source) onRun(dom.Event) {
+	go s.code.callAndWrite(s.code.runCode, s.lastSrc)
+}
+
 func (s *Source) onSourceChange(dom.Event) {
 	currentSrc := s.extractSource()
 	if currentSrc == s.lastSrc {
@@ -103,23 +109,5 @@ func (s *Source) onSourceChange(dom.Event) {
 	sel := s.code.gui.CurrentSelection(s.input)
 	defer sel.SetAsCurrent()
 	s.set(currentSrc)
-}
-
-func (s *Source) onRun(ev dom.Event) {
-	bld := builder.New(importers.NewCacheLoader(
-		stdlib.Importer(nil),
-	))
-	pkg := bld.NewIncrementalPackage("main")
-	if err := pkg.Build(s.lastSrc); err != nil {
-		s.code.out.div.SetInnerHTML(fmt.Sprintf("ERROR: %s", err.Error()))
-		return
-	}
-	irPkg := pkg.IR()
-	const fnName = "Main"
-	fn := irPkg.FindFunc(fnName)
-	if fn == nil {
-		s.code.out.div.SetInnerHTML(fmt.Sprintf("ERROR: function %s not found", fnName))
-		return
-	}
-	s.code.out.div.SetInnerHTML(fmt.Sprintf("Main: %v", fn))
+	go s.code.callAndWrite(s.code.compileAndWrite, currentSrc)
 }
