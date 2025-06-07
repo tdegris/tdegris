@@ -14,7 +14,12 @@ var data = []struct {
 		Content: []lesson{
 			{
 				Text: "Lesson 1.1</br>Some other</br>text.",
-				Code: "Some code for 1.1\nfloat32\npackage",
+				Code: `package main
+
+func Main() float32 {
+  return 2+3
+}
+`,
 			},
 			{
 				Text: "Lesson 1.2",

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gx-org/gx/build/builder"
+	"github.com/gx-org/gx/build/importers"
+	"github.com/gx-org/gx/stdlib"
 	"github.com/tdegris/tdegris/internal/pages/wasm/ui"
 	"honnef.co/go/js/dom/v2"
 )
@@ -75,6 +78,7 @@ func format(s string) string {
 }
 
 func (s *Source) set(src string) {
+	s.lastSrc = src
 	parent := s.input
 	for _, child := range parent.ChildNodes() {
 		parent.RemoveChild(child)
@@ -102,5 +106,20 @@ func (s *Source) onSourceChange(dom.Event) {
 }
 
 func (s *Source) onRun(ev dom.Event) {
-	fmt.Println("onRun")
+	bld := builder.New(importers.NewCacheLoader(
+		stdlib.Importer(nil),
+	))
+	pkg := bld.NewIncrementalPackage("main")
+	if err := pkg.Build(s.lastSrc); err != nil {
+		s.code.out.div.SetInnerHTML(fmt.Sprintf("ERROR: %s", err.Error()))
+		return
+	}
+	irPkg := pkg.IR()
+	const fnName = "Main"
+	fn := irPkg.FindFunc(fnName)
+	if fn == nil {
+		s.code.out.div.SetInnerHTML(fmt.Sprintf("ERROR: function %s not found", fnName))
+		return
+	}
+	s.code.out.div.SetInnerHTML(fmt.Sprintf("Main: %v", fn))
 }
